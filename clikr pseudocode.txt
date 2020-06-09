@@ -1,0 +1,11 @@
+clikr pseudocode
+
+read biogrid interaction data for species of interest
+
+take in rank order list
+
+turn interaction data into matrix
+
+trim matrix of data not in list
+
+order matrix based on list in both dimensions
