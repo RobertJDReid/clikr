@@ -1,7 +1,7 @@
 ---
-title: "clikr"
+title: "clikr - nsp4"
 author: "Robert Reid"
-date: "6/3/2020"
+date: "6/17/2020"
 output: html_document
 ---
 
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Load BioGrid
 
-BioGrid data is from a previously downloaded set. Need to add DL routine
+- also need to write a BioGrid DL routine
 
 ```{r}
 biogrid__3_5_165 <- read_delim("data/biogrid/BIOGRID-ORGANISM-Saccharomyces_cerevisiae_S288c-3.5.165.tab2.txt", 
@@ -25,7 +25,6 @@ biogrid__3_5_165 <- read_delim("data/biogrid/BIOGRID-ORGANISM-Saccharomyces_cere
     orfA = `Systematic Name Interactor A`,
     orfB = `Systematic Name Interactor B`,
   )
-
 ```
 
 ## Rank order approach
@@ -33,28 +32,28 @@ biogrid__3_5_165 <- read_delim("data/biogrid/BIOGRID-ORGANISM-Saccharomyces_cere
 This is similar to the Perl version of CLIK
 
 ```{r}
-# note this cisplatin sensitivity data is pre-sorted
-
-cispt <- read_csv("data/cisplatin/lee-2005-cspt.csv") %>%
+# note this data is pre-sorted
+orf8 <- read_csv("data/COVID/screenmill-interaction-scores-stringent-orf8.csv") %>%
+  arrange(z_score) %>%
   mutate(
+    strain_name = str_to_upper(strain_name),
     rank_a = row_number(),
     rank_b = rank_a
   )
 
+# at this point should deal with duplicate data in a set and average the ranks
+
 # CLIK graph interactions are set up on sorted experimental data
 
 ranked_biogrid <- biogrid__3_5_165 %>%
-  left_join(select(cispt,ORF,rank_a), by = c("orfA" = "ORF")) %>%
-  left_join(select(cispt,ORF,rank_b), by = c("orfB" = "ORF")) %>%
+  left_join(select(orf8,strain_name,rank_a), by = c("geneA" = "strain_name")) %>%
+  left_join(select(orf8,strain_name,rank_b), by = c("geneB" = "strain_name")) %>%
   filter(complete.cases(.))
-```
 
-Three views of CLIK data
 
-```{r}
-pal <- viridisLite::volcano(65,direction = -1)
-basePal <- colorRampPalette(pal)
-#basePal <- colorRampPalette(rainbow(65,start=0.35))
+#pal <- viridisLite::magma(65,direction = -1)
+#basePal <- colorRampPalette(pal)
+basePal <- colorRampPalette(rainbow(65,start=0.35))
 CLIK_colors <- densCols(ranked_biogrid$rank_a,ranked_biogrid$rank_b,
                         colramp=basePal,
                         nbin=132,
@@ -71,7 +70,7 @@ ranked_biogrid %>%
 
 ranked_biogrid %>%
   ggplot(aes(x=rank_a,y=rank_b)) +
-  geom_bin2d(bins=100) +
+  geom_bin2d(bins=132) +
   scale_fill_viridis_c(direction = -1) +
   theme(
     axis.text.x = element_blank(),
@@ -83,22 +82,22 @@ ranked_biogrid %>%
 
 ranked_biogrid %>%
   ggplot(aes(x=rank_a,y=rank_b)) +
-  stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="white",n=132,h=18) +
+  geom_density2d(n=132,h=18) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank()
+  )
+
+ranked_biogrid %>%
+  ggplot(aes(x=rank_a,y=rank_b)) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="white",n=132,h=72) +
   #  geom_density2d(n=132,h=18) +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank()
-  ) +
-  xlim(c(1,200)) +
-  ylim(c(1,200))
+  ) #+
+#  xlim(c(1,200)) +
+#  ylim(c(1,200))
+
+
 ```
-
-## To do
-
-- Tally total interactions/gene as separate list so "noisy genes" can be filtered out
-- could try a normalization approach so each row/column density is calculated independently and max set to 1
-- Deal with duplicate data in a set and average the ranks or remove outliers
-- ID max density peaks
-- CLIK on web calculated density distros for randomized datasets to calculate a p value for density peaks
-- Perform summation of interactions on BioGrid to come up with a consensus view of each interaction
-  - i.e. _genex_ by _geney_ interactions scores 5 negative and 1 positive sums to 4 

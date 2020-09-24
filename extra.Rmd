@@ -1,0 +1,84 @@
+---
+title: "extra"
+author: "Robert Reid"
+date: "6/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(igraph)
+theme_set(theme_bw())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+mat <- matrix(c(1,1,2,3,3,4,5,5,6),nrow = 3)
+name_list <- c("a","b","c")
+dimnames(mat) <- list(name_list,name_list)
+
+```
+
+
+```{r}
+# toy data
+toy_frame <- read_csv("data/toy/toy-edges.csv")
+
+# use edge list in dataframe to make graph
+toy_graph <- graph_from_data_frame(toy_frame)
+
+# plot graph
+plot(toy_graph)
+
+# make matrix of graph interactions
+toy_mat <- as_adjacency_matrix(toy_graph, sparse = F)
+
+# at this point can limit x and y to the nodes you want plotted (genes in screen)
+# can also order them by some metric, such as rank or z score
+
+# melt matrix to use in ploting routines
+toy_data <- reshape2::melt(toy_mat)
+
+toy_data2 <- reshape2::melt(toy_mat[c('a','b','r','s','t'),c('t','s','r','b','a')])
+
+toy_data2 %>%
+  ggplot(aes(x=Var1,y=Var2,fill=value)) +
+  geom_raster() #+
+  #scale_y_reverse()
+```
+
+
+
+```{r}
+# igraph examples
+
+g <- sample_gnp(10, 2/10)
+as_adjacency_matrix(g)
+V(g)$name <- letters[1:vcount(g)]
+as_adjacency_matrix(g)
+E(g)$weight <- runif(ecount(g))
+as_adjacency_matrix(g, attr="weight")
+
+g_mat <- as_adj(g,sparse = F)
+
+
+## A simple example with a couple of actors
+## The typical case is that these tables are read in from files....
+actors <- data.frame(name=c("Alice", "Bob", "Cecil", "David",
+                            "Esmeralda"),
+                     age=c(48,33,45,34,21),
+                     gender=c("F","M","F","M","F"))
+relations <- data.frame(from=c("Bob", "Cecil", "Cecil", "David",
+                               "David", "Esmeralda"),
+                        to=c("Alice", "Bob", "Alice", "Alice", "Bob", "Alice"),
+                        same.dept=c(FALSE,FALSE,TRUE,FALSE,FALSE,TRUE),
+                        friendship=c(4,5,5,2,1,1), advice=c(4,5,5,4,2,3))
+g <- graph_from_data_frame(relations, directed=TRUE, vertices=actors)
+print(g, e=TRUE, v=TRUE)
+
+plot(g)
+
+## The opposite operation
+as_data_frame(g, what="vertices")
+as_data_frame(g, what="edges")
+```
