@@ -13,11 +13,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Code can be forked from : https://github.com/RobertJDReid/clikr.git
 
-# Load BioGrid
+### Load BioGrid
 
 BioGrid data is from a previously downloaded set. Need to add DL routine
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 biogrid__3_5_165 <- read_delim("data/biogrid/BIOGRID-ORGANISM-Saccharomyces_cerevisiae_S288c-3.5.165.tab2.txt", 
     "\t", escape_double = FALSE, trim_ws = TRUE) %>%
   #filter(`Experimental System` == "Negative Genetic") %>%
@@ -30,11 +30,11 @@ biogrid__3_5_165 <- read_delim("data/biogrid/BIOGRID-ORGANISM-Saccharomyces_cere
 
 ```
 
-## Rank order approach
+### Rank order approach
 
 This is similar to the Perl version of CLIK
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # note this cisplatin sensitivity data is pre-sorted
 
 cispt <- read_csv("data/cisplatin/lee-2005-cspt.csv") %>%
@@ -51,10 +51,12 @@ ranked_biogrid <- biogrid__3_5_165 %>%
   filter(complete.cases(.))
 ```
 
-Three views of CLIK data
+### Three views of CLIK data
 
-```{r}
-pal <- viridisLite::volcano(65,direction = -1)
+__1) plot points and color by 2D density - slow__
+
+```{r message=FALSE, warning=FALSE}
+pal <- viridisLite::magma(65,direction = -1)
 basePal <- colorRampPalette(pal)
 #basePal <- colorRampPalette(rainbow(65,start=0.35))
 CLIK_colors <- densCols(ranked_biogrid$rank_a,ranked_biogrid$rank_b,
@@ -70,7 +72,11 @@ ranked_biogrid %>%
     axis.text.x = element_blank(),
     axis.text.y = element_blank()
   )
+```
 
+__2) plot a grid - faster__
+
+```{r message=FALSE, warning=FALSE}
 ranked_biogrid %>%
   ggplot(aes(x=rank_a,y=rank_b)) +
   geom_bin2d(bins=100) +
@@ -78,29 +84,27 @@ ranked_biogrid %>%
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank()
-  ) #+
-  # xlim(c(1,200)) +
-  # ylim(c(1,200))
+  )
+```
 
+__3) plot topo lines - zoomed in for this one__
 
+```{r message=FALSE, warning=FALSE}
 ranked_biogrid %>%
   ggplot(aes(x=rank_a,y=rank_b)) +
   stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="white",n=132,h=18) +
-  #  geom_density2d(n=132,h=18) +
-  theme(
-    axis.text.x = element_blank(),
-    axis.text.y = element_blank()
-  ) +
   xlim(c(1,200)) +
   ylim(c(1,200))
 ```
 
-## To do
+### To do
 
-- Tally total interactions/gene as separate list so "noisy genes" can be filtered out
+- tally total interactions/gene as separate list so "noisy genes" can be filtered out
 - could try a normalization approach so each row/column density is calculated independently and max set to 1
-- Deal with duplicate data in a set and average the ranks or remove outliers
+- deal with duplicate data in a set and average the ranks or remove outliers
 - ID max density peaks
 - CLIK on web calculated density distros for randomized datasets to calculate a p value for density peaks
-- Perform summation of interactions on BioGrid to come up with a consensus view of each interaction
+- overfitting vs. underfitting of density
+- density edge effects
+- perform summation of interactions on BioGrid to come up with a consensus view of each interaction
   - i.e. _genex_ by _geney_ interactions scores 5 negative and 1 positive sums to 4 
